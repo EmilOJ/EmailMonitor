@@ -67,6 +67,10 @@ class TestTrayIconFunctionality(unittest.TestCase):
         mock_pystray.MenuItem.side_effect = lambda text, action, default=False: (text, action, default)
         mock_pystray.Menu.SEPARATOR = "---"
         
+        # Make the thread.start method a no-op to prevent hanging
+        mock_thread_instance = MagicMock()
+        mock_thread.return_value = mock_thread_instance
+        
         # Call method
         self.app.setup_tray_icon()
         
@@ -74,6 +78,7 @@ class TestTrayIconFunctionality(unittest.TestCase):
         mock_image.open.assert_called_once_with("icon.png")
         mock_pystray.Icon.assert_called_once()
         mock_thread.assert_called_once()
+        mock_thread_instance.start.assert_called_once()  # Verify start was called on the thread
         self.app.log_message_gui.assert_called_with("System tray icon initialized.")
         self.assertEqual(self.app.tray_icon, mock_icon)
             
@@ -88,6 +93,10 @@ class TestTrayIconFunctionality(unittest.TestCase):
         mock_image_instance = MagicMock()
         mock_image.new.return_value = mock_image_instance
         mock_image.open.return_value = mock_image_instance
+        
+        # Make the thread.start method a no-op
+        mock_thread_instance = MagicMock()
+        mock_thread.return_value = mock_thread_instance
         
         # Call method
         self.app.setup_tray_icon()
