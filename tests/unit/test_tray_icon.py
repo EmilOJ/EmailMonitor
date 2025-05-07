@@ -140,35 +140,43 @@ class TestTrayIconFunctionality(unittest.TestCase):
         self.root.withdraw.assert_called_once()
         self.app.log_message_gui.assert_called_with("Application minimized to system tray.")
     
-    @patch('tkinter.messagebox.askokcancel', return_value=True)
+    @patch('gui_app._show_askokcancel_dialog', return_value=True)
     def test_hide_to_tray_no_icon_quit(self, mock_dialog):
         """Test hiding to tray when no tray icon is available - user chooses to quit"""
         # Setup
         self.app.tray_icon = None
         self.app.quit_application = MagicMock()
-        self.app.root.tk.call = MagicMock() # Added to mock tk.call for messagebox
+        self.app.root.tk.call = MagicMock()
         
         # Call method
         self.app.hide_to_tray()
         
         # Assertions
         self.app.log_message_gui.assert_called_with("System tray icon not available. Cannot minimize to tray.")
-        mock_dialog.assert_called_once()
+        mock_dialog.assert_called_once_with(
+            "Quit?",
+            "System tray not available. Quit the application?",
+            parent=self.app.root
+        )
         self.app.quit_application.assert_called_once()
-    
-    @patch('tkinter.messagebox.askokcancel', return_value=False)
+
+    @patch('gui_app._show_askokcancel_dialog', return_value=False)
     def test_hide_to_tray_no_icon_stay(self, mock_dialog):
         """Test hiding to tray when no tray icon is available - user chooses to stay"""
         # Setup
         self.app.tray_icon = None
         self.app.quit_application = MagicMock()
-        self.app.root.tk.call = MagicMock() # Added to mock tk.call for messagebox
+        self.app.root.tk.call = MagicMock()
         
         # Call method
         self.app.hide_to_tray()
         
         # Assertions
-        mock_dialog.assert_called_once()
+        mock_dialog.assert_called_once_with(
+            "Quit?",
+            "System tray not available. Quit the application?",
+            parent=self.app.root
+        )
         self.app.quit_application.assert_not_called()
     
     def test_show_from_tray(self):

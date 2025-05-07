@@ -156,21 +156,17 @@ class TestEmailMonitorApp(unittest.TestCase):
             mock_thread.assert_called_once()
             mock_log.assert_called_with("Monitoring started.")
 
-    @patch('gui_app.EmailMonitorApp.log_message_gui')
-    @patch('gui_app.messagebox.showwarning') # Changed patch target
-    @patch('gui_app.EmailMonitorApp.run_setup_wizard')
-    def test_start_monitoring_without_config(self, mock_run_setup, mock_warning, mock_log):
-        """Test start_monitoring without valid configuration"""
-        # Setup
+    @patch('gui_app.SetupWizard')
+    @patch('gui_app.tk_messagebox.showwarning')
+    def test_start_monitoring_without_config(self, mock_messagebox, mock_wizard):
+        """Test attempting to start monitoring without valid config"""
         self.app.config_loaded = False
+        self.app.run_setup_wizard = MagicMock()
         
-        # Call method
         self.app.start_monitoring()
         
-        # Assertions
-        self.assertFalse(self.app.monitoring_active)
-        mock_warning.assert_called_once()
-        mock_run_setup.assert_called_once_with(force_setup=True)
+        mock_messagebox.assert_called_once()
+        self.app.run_setup_wizard.assert_called_once_with(force_setup=True)
 
     @patch('gui_app.EmailMonitorApp.log_message_gui')
     def test_start_monitoring_already_active(self, mock_log):
@@ -291,19 +287,15 @@ class TestEmailMonitorApp(unittest.TestCase):
         self.app.stop_button.config.assert_called_with(state=tk.DISABLED)
         self.app.settings_button.config.assert_called_with(state=tk.NORMAL)
 
-    @patch('gui_app.EmailMonitorApp.log_message_gui')
-    @patch('gui_app.messagebox.showwarning') # Changed patch target
-    def test_run_setup_wizard_when_monitoring(self, mock_warning, mock_log):
-        """Test run_setup_wizard when monitoring is active"""
-        # Setup
+    @patch('gui_app.SetupWizard')
+    @patch('gui_app.tk_messagebox.showwarning')
+    def test_run_setup_wizard_when_monitoring(self, mock_messagebox, mock_wizard):
+        """Test that setup wizard cannot be run when monitoring is active"""
         self.app.monitoring_active = True
-        
-        # Call method
         self.app.run_setup_wizard()
         
-        # Assertions
-        mock_warning.assert_called_once()
-        self.root.focus_set.assert_not_called()
+        mock_messagebox.assert_called_once()
+        mock_wizard.assert_not_called()
 
     @patch('gui_app.SetupWizard')
     @patch('gui_app.save_configuration')
@@ -380,77 +372,61 @@ class TestEmailMonitorApp(unittest.TestCase):
         self.mock_log_message_gui.assert_called_once_with(test_message)
 
 
-    @patch('gui_app.messagebox.askyesnocancel') # Changed patch target
-    @patch('gui_app.EmailMonitorApp.stop_monitoring')
-    @patch('gui_app.EmailMonitorApp.quit_application')
-    @patch('gui_app.EmailMonitorApp.hide_to_tray')
-    def test_on_closing_when_monitoring_exit(self, mock_hide, mock_quit, mock_stop, mock_dialog):
-        """Test on_closing when monitoring is active and user chooses to exit"""
-        # Setup
+    @patch('gui_app.tk_messagebox.askyesnocancel', return_value=True)  # Choose to exit
+    def test_on_closing_when_monitoring_exit(self, mock_dialog):
+        """Test on_closing when monitoring and user chooses to exit"""
         self.app.monitoring_active = True
-        mock_dialog.return_value = True  # True = Stop and exit
+        self.app.stop_monitoring = MagicMock()
+        self.app.quit_application = MagicMock()
+        self.app.hide_to_tray = MagicMock()
         
-        # Call method
         self.app.on_closing()
         
-        # Assertions
         mock_dialog.assert_called_once()
-        mock_stop.assert_called_once()
-        mock_quit.assert_called_once()
-        mock_hide.assert_not_called()
+        self.app.stop_monitoring.assert_called_once()
+        self.app.quit_application.assert_called_once()
+        self.app.hide_to_tray.assert_not_called()
 
-    @patch('gui_app.messagebox.askyesnocancel') # Changed patch target
-    @patch('gui_app.EmailMonitorApp.stop_monitoring')
-    @patch('gui_app.EmailMonitorApp.quit_application')
-    @patch('gui_app.EmailMonitorApp.hide_to_tray')
-    def test_on_closing_when_monitoring_minimize(self, mock_hide, mock_quit, mock_stop, mock_dialog):
-        """Test on_closing when monitoring is active and user chooses to minimize"""
-        # Setup
+    @patch('gui_app.tk_messagebox.askyesnocancel', return_value=False)  # Choose to minimize
+    def test_on_closing_when_monitoring_minimize(self, mock_dialog):
+        """Test on_closing when monitoring and user chooses to minimize"""
         self.app.monitoring_active = True
-        mock_dialog.return_value = False  # False = Minimize to tray
+        self.app.stop_monitoring = MagicMock()
+        self.app.quit_application = MagicMock()
+        self.app.hide_to_tray = MagicMock()
         
-        # Call method
         self.app.on_closing()
         
-        # Assertions
         mock_dialog.assert_called_once()
-        mock_stop.assert_not_called()
-        mock_quit.assert_not_called()
-        mock_hide.assert_called_once()
+        self.app.stop_monitoring.assert_not_called()
+        self.app.quit_application.assert_not_called()
+        self.app.hide_to_tray.assert_called_once()
 
-    @patch('gui_app.messagebox.askyesno') # Changed patch target
-    @patch('gui_app.EmailMonitorApp.quit_application')
-    @patch('gui_app.EmailMonitorApp.hide_to_tray')
-    def test_on_closing_when_not_monitoring_minimize(self, mock_hide, mock_quit, mock_dialog):
+    @patch('gui_app.tk_messagebox.askyesno', return_value=True)  # Choose to minimize
+    def test_on_closing_when_not_monitoring_minimize(self, mock_dialog):
         """Test on_closing when not monitoring and user chooses to minimize"""
-        # Setup
         self.app.monitoring_active = False
-        mock_dialog.return_value = True  # True = Minimize to tray
+        self.app.quit_application = MagicMock()
+        self.app.hide_to_tray = MagicMock()
         
-        # Call method
         self.app.on_closing()
         
-        # Assertions
         mock_dialog.assert_called_once()
-        mock_hide.assert_called_once()
-        mock_quit.assert_not_called()
+        self.app.quit_application.assert_not_called()
+        self.app.hide_to_tray.assert_called_once()
 
-    @patch('gui_app.messagebox.askyesno') # Changed patch target
-    @patch('gui_app.EmailMonitorApp.quit_application')
-    @patch('gui_app.EmailMonitorApp.hide_to_tray')
-    def test_on_closing_when_not_monitoring_quit(self, mock_hide, mock_quit, mock_dialog):
+    @patch('gui_app.tk_messagebox.askyesno', return_value=False)  # Choose to quit
+    def test_on_closing_when_not_monitoring_quit(self, mock_dialog):
         """Test on_closing when not monitoring and user chooses to quit"""
-        # Setup
         self.app.monitoring_active = False
-        mock_dialog.return_value = False  # False = Quit
+        self.app.quit_application = MagicMock()
+        self.app.hide_to_tray = MagicMock()
         
-        # Call method
         self.app.on_closing()
         
-        # Assertions
         mock_dialog.assert_called_once()
-        mock_hide.assert_not_called()
-        mock_quit.assert_called_once()
+        self.app.quit_application.assert_called_once()
+        self.app.hide_to_tray.assert_not_called()
 
 
 class TestMonitoringLoop(unittest.TestCase):

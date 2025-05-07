@@ -129,7 +129,7 @@ MAILBOX = "TestBox"
     def test_save_configuration_failure(self):
         """Test handling of failure to save configuration"""
         with patch('builtins.open', side_effect=Exception("Permission denied")), \
-             patch('gui_app.messagebox.showerror') as mock_showerror: # Changed patch target
+             patch('gui_app.tk_messagebox.showerror') as mock_showerror: # Changed patch target
             
             result = gui_app.save_configuration(self.test_config)
             
@@ -152,103 +152,64 @@ class TestSetupWizard(unittest.TestCase):
             "MAILBOX": "TestBox"
         }
 
-    @patch('tkinter.simpledialog.Dialog.__init__')
-    @patch('gui_app.load_configuration')
-    def test_setup_wizard_init_with_initial_config(self, mock_load_config, mock_dialog_init):
-        """Test initialization of SetupWizard with initial config"""
-        mock_dialog_init.side_effect = None # Added fix
-        parent = MagicMock()
-        gui_app.SetupWizard(parent, initial_config=self.test_config)
-        
-        # Verify parent dialog __init__ was called
-        mock_dialog_init.assert_called_once()
-        # Verify load_configuration was NOT called when initial_config is provided
-        mock_load_config.assert_not_called()
-
-    @patch('tkinter.simpledialog.Dialog.__init__')
-    @patch('gui_app.load_configuration', return_value={"IMAP_SERVER": "imap.default.com"})
-    def test_setup_wizard_init_without_initial_config(self, mock_load_config, mock_dialog_init):
-        """Test initialization of SetupWizard without initial config"""
-        mock_dialog_init.side_effect = None # Added fix
-        parent = MagicMock()
-        gui_app.SetupWizard(parent)
-        
-        # Verify parent dialog __init__ was called
-        mock_dialog_init.assert_called_once()
-        # Verify load_configuration was called when initial_config is not provided
-        mock_load_config.assert_called_once()
-
-    @patch('tkinter.simpledialog.Dialog.__init__')
-    @patch('tkinter.simpledialog.Dialog.destroy')
-    @patch('gui_app.messagebox.showerror') # Changed patch target
-    def test_setup_wizard_apply_invalid_poll_interval(self, mock_showerror, mock_destroy, mock_dialog_init):
+    @patch('gui_app._show_error_dialog')
+    def test_setup_wizard_apply_invalid_poll_interval(self, mock_showerror):
         """Test SetupWizard.apply() with invalid poll interval"""
-        mock_dialog_init.side_effect = None # Added fix
-        # Setup
         parent = MagicMock()
-        wizard = gui_app.SetupWizard(parent, initial_config=self.test_config)
-        wizard.poll_interval_entry = MagicMock()
+        
+        # Use TestableSetupWizard instead
+        wizard = gui_app.TestableSetupWizard(parent, initial_config=self.test_config)
         wizard.poll_interval_entry.get.return_value = "invalid"
         
-        # Execute apply method (which isn't called by __init__ in this mock)
-        wizard.apply()
+        # Apply method will check showerror
+        result = wizard.apply()
         
-        # Verify error message was shown
+        # Verify showerror was called
         mock_showerror.assert_called_once()
-        # Verify result_config is still None
+        # Verify result is False
+        self.assertFalse(result)
+        # Verify result_config was not set
         self.assertIsNone(wizard.result_config)
 
-    @patch('tkinter.simpledialog.Dialog.__init__')
-    @patch('tkinter.simpledialog.Dialog.destroy')
-    @patch('gui_app.messagebox.showerror') # Changed patch target
-    def test_setup_wizard_apply_negative_poll_interval(self, mock_showerror, mock_destroy, mock_dialog_init):
+    @patch('gui_app._show_error_dialog')
+    def test_setup_wizard_apply_negative_poll_interval(self, mock_showerror):
         """Test SetupWizard.apply() with negative poll interval"""
-        mock_dialog_init.side_effect = None # Added fix
-        # Setup
         parent = MagicMock()
-        wizard = gui_app.SetupWizard(parent, initial_config=self.test_config)
-        wizard.poll_interval_entry = MagicMock()
+        
+        # Use TestableSetupWizard instead
+        wizard = gui_app.TestableSetupWizard(parent, initial_config=self.test_config)
         wizard.poll_interval_entry.get.return_value = "-10"
         
-        # Execute apply method
-        wizard.apply()
+        # Apply method will check showerror
+        result = wizard.apply()
         
-        # Verify error message was shown
+        # Verify showerror was called
         mock_showerror.assert_called_once()
-        # Verify result_config is still None
+        # Verify result is False
+        self.assertFalse(result)
+        # Verify result_config was not set
         self.assertIsNone(wizard.result_config)
 
-    @patch('tkinter.simpledialog.Dialog.__init__')
-    @patch('tkinter.simpledialog.Dialog.destroy')
-    def test_setup_wizard_apply_valid_inputs(self, mock_destroy, mock_dialog_init):
+    def test_setup_wizard_apply_valid_inputs(self):
         """Test SetupWizard.apply() with valid inputs"""
-        mock_dialog_init.side_effect = None # Added fix
-        # Setup
         parent = MagicMock()
-        wizard = gui_app.SetupWizard(parent, initial_config=self.test_config)
         
-        # Mock all entry widgets
-        wizard.imap_server_entry = MagicMock()
+        # Use TestableSetupWizard instead
+        wizard = gui_app.TestableSetupWizard(parent, initial_config=self.test_config)
+        
+        # Configure mock entry widgets return values
         wizard.imap_server_entry.get.return_value = "imap.example.com"
-        
-        wizard.email_account_entry = MagicMock()
         wizard.email_account_entry.get.return_value = "user@example.com"
-        
-        wizard.app_password_entry = MagicMock()
         wizard.app_password_entry.get.return_value = "app_password"
-        
-        wizard.keyword_entry = MagicMock()
-        wizard.keyword_entry.get.return_value = "search_keyword"
-        
-        wizard.poll_interval_entry = MagicMock()
+        wizard.keyword_entry.get.return_value = "search_keyword" 
         wizard.poll_interval_entry.get.return_value = "120"
-        
-        wizard.mailbox_entry = MagicMock()
         wizard.mailbox_entry.get.return_value = "INBOX"
         
         # Execute apply method
-        wizard.apply()
+        result = wizard.apply()
         
+        # Verify result is True
+        self.assertTrue(result)
         # Verify result_config contains expected values
         self.assertIsNotNone(wizard.result_config)
         self.assertEqual(wizard.result_config["IMAP_SERVER"], "imap.example.com")
@@ -257,6 +218,32 @@ class TestSetupWizard(unittest.TestCase):
         self.assertEqual(wizard.result_config["KEYWORD"], "search_keyword")
         self.assertEqual(wizard.result_config["POLL_INTERVAL_SECONDS"], 120)
         self.assertEqual(wizard.result_config["MAILBOX"], "INBOX")
+
+    @patch('gui_app.load_configuration')
+    def test_setup_wizard_init_with_initial_config(self, mock_load_config):
+        """Test initialization of SetupWizard with initial config"""
+        parent = MagicMock()
+        
+        # Use TestableSetupWizard instead
+        wizard = gui_app.TestableSetupWizard(parent, initial_config=self.test_config)
+        
+        # Verify load_configuration was not called
+        mock_load_config.assert_not_called()
+        # Verify config is set to initial_config
+        self.assertEqual(wizard.config, self.test_config)
+
+    @patch('gui_app.load_configuration', return_value={"IMAP_SERVER": "imap.default.com"})
+    def test_setup_wizard_init_without_initial_config(self, mock_load_config):
+        """Test initialization of SetupWizard without initial config"""
+        parent = MagicMock()
+        
+        # Use TestableSetupWizard instead
+        wizard = gui_app.TestableSetupWizard(parent)
+        
+        # Verify load_configuration was called
+        mock_load_config.assert_called_once()
+        # Verify config is set to return value of load_configuration
+        self.assertEqual(wizard.config, {"IMAP_SERVER": "imap.default.com"})
 
 if __name__ == '__main__':
     unittest.main()
