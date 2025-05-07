@@ -27,7 +27,7 @@ class TestConfigFunctions(unittest.TestCase):
             "APP_PASSWORD": "test_password",
             "KEYWORD": "test_keyword",
             "POLL_INTERVAL_SECONDS": 60,
-            "MAILBOX": "TestBox"
+            "MAILBOX": "Inbox"
         }
         
         # Sample config file content
@@ -149,7 +149,7 @@ class TestSetupWizard(unittest.TestCase):
             "APP_PASSWORD": "test_password",
             "KEYWORD": "test_keyword",
             "POLL_INTERVAL_SECONDS": 60,
-            "MAILBOX": "TestBox"
+            "MAILBOX": "Inbox"
         }
 
     @patch('gui_app._show_error_dialog')

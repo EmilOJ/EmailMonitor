@@ -1,15 +1,13 @@
 # Gmail IMAP settings
 IMAP_SERVER = 'imap.gmail.com'
-EMAIL_ACCOUNT = 'YOUR_EMAIL@gmail.com'  # Replace with your Gmail address
-APP_PASSWORD = 'YOUR_APP_PASSWORD'      # Replace with your Gmail app password (see README for setup)
+EMAIL_ACCOUNT = 'emil.johansen@gmail.com'  # Replace with your Gmail address
+APP_PASSWORD = 'rahx ovtl opkx oqcs'      # Replace with your Gmail app password
 
 # Email search criteria
-# This keyword will be searched in the email's subject OR body.
-# The search is case-insensitive.
-KEYWORD = 'your_specific_keyword'       # Replace with the keyword to search for
+KEYWORD = 'test123'       # Replace with the keyword to search for
 
 # Monitoring settings
-POLL_INTERVAL_SECONDS = 30              # Time to wait between checking for new emails (in seconds)
+POLL_INTERVAL_SECONDS = 5
 
-# Optional: Specify the mailbox to monitor (default is "INBOX")
-MAILBOX = "INBOX"
+# Optional: Specify the mailbox to monitor (default is "Inbox")
+MAILBOX = "Inbox"

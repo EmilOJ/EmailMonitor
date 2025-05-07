@@ -35,7 +35,7 @@ DEFAULT_CONFIG = {
     "APP_PASSWORD": "YOUR_APP_PASSWORD",
     "KEYWORD": "your_specific_keyword",
     "POLL_INTERVAL_SECONDS": 30,
-    "MAILBOX": "INBOX"
+    "MAILBOX": "Inbox"
 }
 
 def load_configuration():
@@ -65,7 +65,7 @@ def save_configuration(config_data):
             f.write(f"KEYWORD = '{config_data['KEYWORD']}'       # Replace with the keyword to search for\n")
             f.write("\n# Monitoring settings\n")
             f.write(f"POLL_INTERVAL_SECONDS = {config_data['POLL_INTERVAL_SECONDS']}\n")
-            f.write("\n# Optional: Specify the mailbox to monitor (default is \"INBOX\")\n")
+            f.write("\n# Optional: Specify the mailbox to monitor (default is \"Inbox\")\n")
             f.write(f"MAILBOX = \"{config_data['MAILBOX']}\"\n")
         return True
     except Exception as e:
@@ -176,7 +176,7 @@ class SetupWizard(simpledialog.Dialog):
         ttk.Label(master, text="Mailbox:").grid(row=5, column=0, sticky="w", padx=5, pady=2)
         self.mailbox_entry = ttk.Entry(master, width=40)
         self.mailbox_entry.grid(row=5, column=1, padx=5, pady=2)
-        self.mailbox_entry.insert(0, self.config.get("MAILBOX", "INBOX"))
+        self.mailbox_entry.insert(0, self.config.get("MAILBOX", "Inbox"))
         
         return self.imap_server_entry # initial focus
 

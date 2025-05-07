@@ -48,7 +48,7 @@ def decode_subject(subject):
 def search_emails(mail, app_config, logger=_console_log_message):
     """Searches for emails with a specific keyword in subject or body."""
     keyword = app_config['KEYWORD']
-    mailbox = app_config.get('MAILBOX', "INBOX")
+    mailbox = app_config.get('MAILBOX', "Inbox")
     try:
         logger(f"Selecting mailbox: '{mailbox}'")
         status, messages = mail.select(mailbox)
@@ -102,7 +102,7 @@ def extract_link_from_email(msg_data, logger=_console_log_message): # msg_data i
 
 def mark_as_read(mail, email_id, app_config, logger=_console_log_message):
     """Marks an email as read (seen)."""
-    mailbox = app_config.get('MAILBOX', "INBOX")
+    mailbox = app_config.get('MAILBOX', "Inbox")
     try:
         # mail.select(mailbox) # select should already be done by search_emails or before calling this
         mail.store(email_id, '+FLAGS', '\\Seen')
@@ -136,7 +136,7 @@ def main():
     }
     # Ensure all required keys are present with defaults if necessary
     current_config_dict.setdefault("IMAP_SERVER", "imap.gmail.com")
-    current_config_dict.setdefault("MAILBOX", "INBOX")
+    current_config_dict.setdefault("MAILBOX", "Inbox")
     current_config_dict.setdefault("POLL_INTERVAL_SECONDS", 30)
 
 

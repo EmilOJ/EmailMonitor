@@ -41,7 +41,7 @@ class TestEmailMonitor(unittest.TestCase):
             "APP_PASSWORD": "test_password",
             "KEYWORD": "test_keyword",
             "POLL_INTERVAL_SECONDS": 10,
-            "MAILBOX": "INBOX"
+            "MAILBOX": "Inbox"
         }
     
     def tearDown(self):
