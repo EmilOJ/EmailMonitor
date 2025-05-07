@@ -15,6 +15,8 @@ This application monitors a Gmail account for emails matching a specific keyword
 -   Logs actions and errors to a text area within the GUI.
 -   System tray icon for minimizing the application and quick access to actions (Show, Settings, Quit).
 -   Configuration is saved to a `config.py` file.
+-   Comprehensive test suite with unit, integration, and end-to-end tests.
+-   Can be packaged as a standalone executable with PyInstaller.
 
 ## Prerequisites
 
@@ -27,7 +29,7 @@ This application monitors a Gmail account for emails matching a specific keyword
 
     You can install them using:
     ```bash
-    pip install Pillow pystray
+    pip install -r requirements.txt
     ```
 
 ## Setup Instructions
@@ -84,6 +86,57 @@ This application monitors a Gmail account for emails matching a specific keyword
     *   Right-click the icon for a menu: Show, Settings, Quit.
     *   Left-click (or default action) shows the application window.
     *   If `Pillow` or `pystray` are not installed, tray functionality will be disabled or limited. A dummy icon might be created if `icon.png` is missing.
+
+## Project Structure
+
+```
+EmailMonitor/
+├── config.py                  # Configuration file created during setup
+├── email_monitor.py           # Core email monitoring functionality
+├── gui_app.py                 # GUI application using Tkinter
+├── icon.ico                   # Application icon (Windows)
+├── icon.png                   # Icon for system tray
+├── README.md                  # This documentation file
+├── requirements.txt           # Python package dependencies
+└── tests/                     # Test suite directory
+    ├── conftest.py            # PyTest configuration
+    ├── e2e/                   # End-to-end tests
+    ├── gui/                   # GUI-specific tests
+    ├── integration/           # Integration tests
+    └── unit/                  # Unit tests
+        ├── test_config.py     # Tests for configuration handling
+        ├── test_email_monitor_app.py  # Tests for main app logic
+        ├── test_email_monitor.py      # Tests for email monitoring
+        └── test_tray_icon.py  # Tests for system tray functionality
+```
+
+## Testing
+
+The project includes a comprehensive test suite using PyTest:
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test categories
+pytest tests/unit/
+pytest tests/integration/
+pytest tests/e2e/
+
+# Run tests with coverage report
+pytest --cov=. tests/
+```
+
+## Building a Standalone Executable
+
+The application can be packaged as a standalone executable using PyInstaller:
+
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --icon=icon.ico --name=EmailMonitor gui_app.py
+```
+
+The built executable will be available in the `dist` directory.
 
 ## How it Works
 
