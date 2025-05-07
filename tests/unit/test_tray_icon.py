@@ -8,6 +8,16 @@ import tkinter as tk
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 import gui_app
 
+# Helper function to set up mock widgets - copied from test_email_monitor_app.py for consistency
+def _setup_mock_widgets(app_instance):
+    app_instance.main_frame = MagicMock(name='main_frame_mock')
+    app_instance.status_label = MagicMock(name='status_label_mock')
+    app_instance.log_text = MagicMock(name='log_text_mock')
+    app_instance.button_frame = MagicMock(name='button_frame_mock')
+    app_instance.start_button = MagicMock(name='start_button_mock')
+    app_instance.stop_button = MagicMock(name='stop_button_mock')
+    app_instance.settings_button = MagicMock(name='settings_button_mock')
+    return None
 
 class TestTrayIconFunctionality(unittest.TestCase):
     """Unit tests for system tray functionality"""
@@ -30,13 +40,17 @@ class TestTrayIconFunctionality(unittest.TestCase):
              patch('gui_app.EmailMonitorApp.setup_tray_icon'), \
              patch('gui_app.EmailMonitorApp.check_log_queue'), \
              patch('gui_app.EmailMonitorApp._is_config_valid', return_value=True), \
-             patch('gui_app.EmailMonitorApp.log_message_gui'):
+             patch('gui_app.EmailMonitorApp.log_message_gui'), \
+             patch('gui_app.EmailMonitorApp.update_gui_state'):  # Patch update_gui_state during initialization
             self.app = gui_app.EmailMonitorApp(self.root)
             
             # Setup manually since we patched the constructor
             self.app.root = self.root
             self.app.current_config = self.test_config
             self.app.log_message_gui = MagicMock()
+            
+            # Add mock widgets that would normally be created by create_main_widgets
+            _setup_mock_widgets(self.app)
             
     @patch('gui_app.PIL_AVAILABLE', True)
     @patch('gui_app.pystray', spec=True)
