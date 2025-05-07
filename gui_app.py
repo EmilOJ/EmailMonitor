@@ -410,12 +410,9 @@ class EmailMonitorApp:
             if not os.path.exists(icon_path):
                 try:
                     # Don't create files during tests - just create a dummy image object
-                    if 'pytest' in sys.modules:
-                        dummy_image = None  # Just to make testing easier
-                    else:
-                        dummy_image = Image.new('RGB', (64, 64), color='blue')
-                        dummy_image.save(icon_path)
-                        self.log_message_gui(f"'{icon_path}' not found. Created a dummy icon. Replace with your desired icon.")
+                    dummy_image = Image.new('RGB', (64, 64), color='blue') # Will use mocked Image.new in tests
+                    dummy_image.save(icon_path) # Will use mocked save in tests
+                    self.log_message_gui(f"'{icon_path}' not found. Created a dummy icon. Replace with your desired icon.")
                 except Exception as e:
                     self.log_message_gui(f"Could not create dummy icon: {e}. Tray icon might not work.")
                     self.tray_icon = None
@@ -436,8 +433,7 @@ class EmailMonitorApp:
             self.tray_icon = pystray.Icon("EmailMonitor", image, "Email Monitor", menu)
             
             # Don't start the thread during testing
-            if 'pytest' not in sys.modules:
-                threading.Thread(target=self.tray_icon.run, daemon=True).start()
+            threading.Thread(target=self.tray_icon.run, daemon=True).start() # Will use mocked Thread in tests
             
             self.log_message_gui("System tray icon initialized.")
 
