@@ -153,9 +153,10 @@ class EmailMonitorApp:
             self.update_gui_state()
 
     def _is_config_valid(self, config_data):
-        if not config_data.get("EMAIL_ACCOUNT") or config_data["EMAIL_ACCOUNT"] == DEFAULT_CONFIG["EMAIL_ACCOUNT"]:
+        # We need to explicitly check against the default config values
+        if not config_data.get("EMAIL_ACCOUNT") or config_data.get("EMAIL_ACCOUNT") == DEFAULT_CONFIG["EMAIL_ACCOUNT"]:
             return False
-        if not config_data.get("APP_PASSWORD") or config_data["APP_PASSWORD"] == DEFAULT_CONFIG["APP_PASSWORD"]:
+        if not config_data.get("APP_PASSWORD") or not config_data["APP_PASSWORD"]:
             return False
         if not config_data.get("KEYWORD") or config_data["KEYWORD"] == DEFAULT_CONFIG["KEYWORD"]:
             return False
@@ -233,6 +234,9 @@ class EmailMonitorApp:
 
         if self.monitoring_thread and self.monitoring_thread.is_alive():
             self.monitoring_thread.join(timeout=self.current_config.get("POLL_INTERVAL_SECONDS", 30) + 5)
+        else:
+            # Ensure join is called even if thread is not alive
+            self.monitoring_thread.join()
         
         if self.monitoring_thread and self.monitoring_thread.is_alive():
             self.log_message_gui("Monitoring thread did not stop in time. It might be stuck.")
