@@ -1,6 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, simpledialog
-from tkinter import messagebox as tk_messagebox
+from tkinter import ttk, simpledialog, messagebox as tk_messagebox  # Import as tk_messagebox for test compatibility
 import os
 import threading
 import time
@@ -8,26 +7,37 @@ import queue
 import sys
 from unittest.mock import MagicMock
 
+# --- Handle optional dependencies gracefully ---
 try:
     import pystray
     from PIL import Image
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
-    pystray = None # type: ignore
+    pystray = None  # type: ignore
 
+# --- Import email monitoring functionality ---
 from email_monitor import (
     connect_to_gmail,
-    search_emails as em_search_emails,
-    decode_subject as em_decode_subject,
-    extract_link_from_email as em_extract_link_from_email,
-    open_link_in_browser as em_open_link_in_browser,
-    mark_as_read as em_mark_as_read,
+    search_emails,
+    decode_subject,
+    extract_link_from_email,
+    open_link_in_browser,
+    mark_as_read,
+    get_decoded_content,
 )
 import imaplib
 import email
 
-# --- Configuration Handling ---
+
+# --- Alias functions for test compatibility ---
+# These functions are used in tests but we've refactored their implementation
+def em_search_emails(mail, app_config, logger=None):
+    """Alias for search_emails maintained for test compatibility"""
+    return search_emails(mail, app_config, logger)
+
+
+# --- Configuration Constants ---
 CONFIG_FILE = "config.py"
 DEFAULT_CONFIG = {
     "IMAP_SERVER": "imap.gmail.com",
@@ -38,7 +48,10 @@ DEFAULT_CONFIG = {
     "MAILBOX": "Inbox"
 }
 
+
+# --- Configuration Management ---
 def load_configuration():
+    """Load application configuration from config.py file"""
     config = DEFAULT_CONFIG.copy()
     if os.path.exists(CONFIG_FILE):
         try:
@@ -50,40 +63,50 @@ def load_configuration():
                     config[key] = global_vars[key]
         except Exception as e:
             print(f"Error loading {CONFIG_FILE}: {e}")
-            pass
     return config
 
+
 def save_configuration(config_data):
+    """Save configuration to config.py file"""
     try:
         config_path = str(CONFIG_FILE)
         with open(config_path, 'w') as f:
+            f.write('"""\nEmail Monitor Configuration\n')
+            f.write('--------------------------\n')
+            f.write('This file contains the settings for the EmailMonitor application.\n\n')
+            f.write('When setting up:\n')
+            f.write('1. Replace the placeholder values with your actual credentials\n')
+            f.write('2. Make sure to obtain an App Password for Gmail to use with this application\n')
+            f.write('   (https://support.google.com/accounts/answer/185833)\n')
+            f.write('"""\n\n')
             f.write("# Gmail IMAP settings\n")
             f.write(f"IMAP_SERVER = '{config_data['IMAP_SERVER']}'\n")
-            f.write(f"EMAIL_ACCOUNT = '{config_data['EMAIL_ACCOUNT']}'  # Replace with your Gmail address\n")
-            f.write(f"APP_PASSWORD = '{config_data['APP_PASSWORD']}'      # Replace with your Gmail app password\n")
-            f.write("\n# Email search criteria\n")
-            f.write(f"KEYWORD = '{config_data['KEYWORD']}'       # Replace with the keyword to search for\n")
-            f.write("\n# Monitoring settings\n")
-            f.write(f"POLL_INTERVAL_SECONDS = {config_data['POLL_INTERVAL_SECONDS']}\n")
-            f.write("\n# Optional: Specify the mailbox to monitor (default is \"Inbox\")\n")
+            f.write(f"EMAIL_ACCOUNT = '{config_data['EMAIL_ACCOUNT']}'\n")
+            f.write(f"APP_PASSWORD = '{config_data['APP_PASSWORD']}'\n\n")
+            f.write("# Email search criteria\n")
+            f.write(f"KEYWORD = '{config_data['KEYWORD']}'\n\n")
+            f.write("# Monitoring settings\n")
+            f.write(f"POLL_INTERVAL_SECONDS = {config_data['POLL_INTERVAL_SECONDS']}\n\n")
+            f.write("# Mailbox to monitor\n")
             f.write(f"MAILBOX = \"{config_data['MAILBOX']}\"\n")
         return True
     except Exception as e:
         tk_messagebox.showerror("Error Saving Config", f"Could not save configuration: {e}")
         return False
 
-# For testability
+
+# --- Dialog Functions (for testing) ---
 def _show_askokcancel_dialog(title, message, parent=None):
     """Wrapper for messagebox.askokcancel for easier patching in tests"""
-    from tkinter import messagebox
-    return messagebox.askokcancel(title, message, parent=parent)
+    return tk_messagebox.askokcancel(title, message, parent=parent)
+
 
 def _show_error_dialog(title, message, parent=None):
     """Wrapper for messagebox.showerror for easier patching in tests"""
-    from tkinter import messagebox
-    return messagebox.showerror(title, message, parent=parent)
+    return tk_messagebox.showerror(title, message, parent=parent)
 
-# Special version for testing
+
+# --- Setup Wizard Dialog ---
 class TestableSetupWizard:
     """A version of SetupWizard that's easier to use in tests"""
     def __init__(self, parent, title="Setup Wizard", initial_config=None):
@@ -124,7 +147,9 @@ class TestableSetupWizard:
         """Show error message - can be overridden in tests"""
         _show_error_dialog(title, message, parent=self.parent)
 
+
 class SetupWizard(simpledialog.Dialog):
+    """Dialog for configuring the email monitoring settings"""
     def __init__(self, parent, title="Setup Wizard", initial_config=None):
         # Store parameters before super().__init__ in case it fails in tests
         self.parent = parent
@@ -148,37 +173,35 @@ class SetupWizard(simpledialog.Dialog):
             print(f"Dialog initialization error (likely in test): {e}")
     
     def body(self, master):
-        ttk.Label(master, text="IMAP Server:").grid(row=0, column=0, sticky="w", padx=5, pady=2)
-        self.imap_server_entry = ttk.Entry(master, width=40)
-        self.imap_server_entry.grid(row=0, column=1, padx=5, pady=2)
-        self.imap_server_entry.insert(0, self.config.get("IMAP_SERVER", ""))
-
-        ttk.Label(master, text="Email Account:").grid(row=1, column=0, sticky="w", padx=5, pady=2)
-        self.email_account_entry = ttk.Entry(master, width=40)
-        self.email_account_entry.grid(row=1, column=1, padx=5, pady=2)
-        self.email_account_entry.insert(0, self.config.get("EMAIL_ACCOUNT", ""))
-
-        ttk.Label(master, text="App Password:").grid(row=2, column=0, sticky="w", padx=5, pady=2)
-        self.app_password_entry = ttk.Entry(master, width=40, show="*")
-        self.app_password_entry.grid(row=2, column=1, padx=5, pady=2)
-        self.app_password_entry.insert(0, self.config.get("APP_PASSWORD", ""))
-
-        ttk.Label(master, text="Keyword:").grid(row=3, column=0, sticky="w", padx=5, pady=2)
-        self.keyword_entry = ttk.Entry(master, width=40)
-        self.keyword_entry.grid(row=3, column=1, padx=5, pady=2)
-        self.keyword_entry.insert(0, self.config.get("KEYWORD", ""))
-
-        ttk.Label(master, text="Poll Interval (sec):").grid(row=4, column=0, sticky="w", padx=5, pady=2)
-        self.poll_interval_entry = ttk.Entry(master, width=40)
-        self.poll_interval_entry.grid(row=4, column=1, padx=5, pady=2)
-        self.poll_interval_entry.insert(0, str(self.config.get("POLL_INTERVAL_SECONDS", 30)))
+        """Create the dialog body with form fields"""
+        # Create and layout form fields
+        fields = [
+            ("IMAP Server:", "imap_server_entry", self.config.get("IMAP_SERVER", "")),
+            ("Email Account:", "email_account_entry", self.config.get("EMAIL_ACCOUNT", "")),
+            ("App Password:", "app_password_entry", self.config.get("APP_PASSWORD", ""), "*"),
+            ("Keyword:", "keyword_entry", self.config.get("KEYWORD", "")),
+            ("Poll Interval (sec):", "poll_interval_entry", str(self.config.get("POLL_INTERVAL_SECONDS", 30))),
+            ("Mailbox:", "mailbox_entry", self.config.get("MAILBOX", "Inbox"))
+        ]
         
-        ttk.Label(master, text="Mailbox:").grid(row=5, column=0, sticky="w", padx=5, pady=2)
-        self.mailbox_entry = ttk.Entry(master, width=40)
-        self.mailbox_entry.grid(row=5, column=1, padx=5, pady=2)
-        self.mailbox_entry.insert(0, self.config.get("MAILBOX", "Inbox"))
+        for i, (label_text, attr_name, default_value, *options) in enumerate(fields):
+            ttk.Label(master, text=label_text).grid(row=i, column=0, sticky="w", padx=5, pady=2)
+            
+            # Create entry with show character if specified (for passwords)
+            show_char = options[0] if options else ""
+            entry = ttk.Entry(master, width=40, show=show_char)
+            entry.grid(row=i, column=1, padx=5, pady=2)
+            entry.insert(0, default_value)
+            
+            # Store entry reference in instance
+            setattr(self, attr_name, entry)
         
-        return self.imap_server_entry # initial focus
+        # Add help text
+        help_text = "Enter your Gmail account and App Password.\nTo create an App Password, visit Google Account > Security > 2-Step Verification > App Passwords."
+        help_label = ttk.Label(master, text=help_text, foreground="gray")
+        help_label.grid(row=len(fields), column=0, columnspan=2, sticky="w", padx=5, pady=10)
+        
+        return self.imap_server_entry  # initial focus
 
     def apply(self):
         """Validate and apply the configuration"""
@@ -196,10 +219,12 @@ class SetupWizard(simpledialog.Dialog):
             return False
 
         # Ensure all entry widgets exist before trying to use them
-        if all(hasattr(self, attr) and getattr(self, attr) is not None for attr in 
-               ['imap_server_entry', 'email_account_entry', 'app_password_entry',
-                'keyword_entry', 'poll_interval_entry', 'mailbox_entry']):
-            
+        required_attrs = [
+            'imap_server_entry', 'email_account_entry', 'app_password_entry',
+            'keyword_entry', 'poll_interval_entry', 'mailbox_entry'
+        ]
+        
+        if all(hasattr(self, attr) and getattr(self, attr) is not None for attr in required_attrs):
             self.result_config = {
                 "IMAP_SERVER": self.imap_server_entry.get(),
                 "EMAIL_ACCOUNT": self.email_account_entry.get(),
@@ -215,25 +240,31 @@ class SetupWizard(simpledialog.Dialog):
         """Show error message - can be overridden in tests"""
         _show_error_dialog(title, message, parent=self.parent)
 
+
 class EmailMonitorApp:
+    """Main application class for Email Monitor GUI"""
     def __init__(self, root):
         self.root = root
         self.root.title("Email Monitor")
         self.root.geometry("600x450")
 
+        # Load configuration
         self.current_config = load_configuration()
         self.config_loaded = self._is_config_valid(self.current_config)
         
+        # Initialize monitoring state
         self.monitoring_active = False
         self.monitoring_thread = None
         self.stop_event = threading.Event()
         self.processed_email_ids = set()
         self.log_queue = queue.Queue()
 
+        # Set up UI
         self.create_main_widgets()
         self.setup_tray_icon()
         self.check_log_queue()
 
+        # Initial app state
         if not self.config_loaded:
             self.log_message_gui("Initial configuration is incomplete or missing. Please run setup.")
             self.run_setup_wizard(force_setup=True)
@@ -242,28 +273,39 @@ class EmailMonitorApp:
             self.update_gui_state()
 
     def _is_config_valid(self, config_data):
-        # We need to explicitly check against the default config values
+        """Check if the configuration has all required values properly set"""
         if not config_data.get("EMAIL_ACCOUNT") or config_data.get("EMAIL_ACCOUNT") == DEFAULT_CONFIG["EMAIL_ACCOUNT"]:
             return False
-        if not config_data.get("APP_PASSWORD") or not config_data["APP_PASSWORD"]:
+        if not config_data.get("APP_PASSWORD"):
             return False
         if not config_data.get("KEYWORD") or config_data["KEYWORD"] == DEFAULT_CONFIG["KEYWORD"]:
             return False
         return True
 
     def create_main_widgets(self):
+        """Create the main application UI widgets"""
+        # Main frame
         self.main_frame = ttk.Frame(self.root, padding="10")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # Status label
         self.status_label = ttk.Label(self.main_frame, text="Status: Idle")
         self.status_label.pack(pady=5)
 
+        # Log text area
         self.log_text = tk.Text(self.main_frame, height=15, state=tk.DISABLED)
         self.log_text.pack(pady=5, fill=tk.BOTH, expand=True)
 
+        # Add scrollbar to log text
+        scrollbar = ttk.Scrollbar(self.log_text, command=self.log_text.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.log_text.config(yscrollcommand=scrollbar.set)
+
+        # Buttons frame
         self.button_frame = ttk.Frame(self.main_frame)
         self.button_frame.pack(pady=5)
 
+        # Action buttons
         self.start_button = ttk.Button(self.button_frame, text="Start Monitoring", command=self.start_monitoring)
         self.start_button.pack(side=tk.LEFT, padx=5)
 
@@ -274,6 +316,7 @@ class EmailMonitorApp:
         self.settings_button.pack(side=tk.LEFT, padx=5)
 
     def run_setup_wizard(self, force_setup=False):
+        """Open the setup wizard dialog to configure the application"""
         if not force_setup and self.monitoring_active:
             tk_messagebox.showwarning("Settings Locked", "Cannot change settings while monitoring is active.", parent=self.root)
             self.log_message_gui("Settings cannot be changed while monitoring is active.")
@@ -295,14 +338,18 @@ class EmailMonitorApp:
         self.root.lift()
 
     def start_monitoring(self):
+        """Start the email monitoring process"""
+        # Check configuration first
         if not self.config_loaded:
             tk_messagebox.showwarning("Configuration Missing", "Please complete the setup wizard first.", parent=self.root)
             self.run_setup_wizard(force_setup=True)
             return
+            
         if self.monitoring_active:
             self.log_message_gui("Monitoring is already active.")
             return
 
+        # Update UI state
         self.status_label.config(text="Status: Monitoring...")
         self.monitoring_active = True
         self.stop_event.clear()
@@ -310,10 +357,12 @@ class EmailMonitorApp:
         self.update_gui_state()
         self.log_message_gui("Monitoring started.")
         
+        # Start monitoring thread
         self.monitoring_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
         self.monitoring_thread.start()
 
     def stop_monitoring(self):
+        """Stop the email monitoring process"""
         if not self.monitoring_active:
             self.log_message_gui("Monitoring is not active.")
             return
@@ -322,11 +371,10 @@ class EmailMonitorApp:
         self.stop_event.set()
         self.monitoring_active = False
 
-        if self.monitoring_thread and self.monitoring_thread.is_alive():
-            self.monitoring_thread.join(timeout=self.current_config.get("POLL_INTERVAL_SECONDS", 30) + 5)
-        else:
-            # Ensure join is called even if thread is not alive
-            self.monitoring_thread.join()
+        # Wait for thread to finish - always call join for test compatibility
+        thread_timeout = self.current_config.get("POLL_INTERVAL_SECONDS", 30) + 5
+        if self.monitoring_thread:
+            self.monitoring_thread.join(timeout=thread_timeout)
         
         if self.monitoring_thread and self.monitoring_thread.is_alive():
             self.log_message_gui("Monitoring thread did not stop in time. It might be stuck.")
@@ -337,13 +385,14 @@ class EmailMonitorApp:
         self.update_gui_state()
 
     def _monitoring_loop(self):
+        """Background thread function that monitors emails"""
         self.log_message_gui(f"Monitoring for emails with keyword: '{self.current_config['KEYWORD']}'")
         self.log_message_gui(f"Polling interval: {self.current_config['POLL_INTERVAL_SECONDS']} seconds.")
 
         while not self.stop_event.is_set():
             mail = None
             try:
-                # Use self.current_config and self.log_message_gui for email_monitor functions
+                # Connect to mail server
                 mail = connect_to_gmail(self.current_config, logger=self.log_message_gui)
 
                 if not mail:
@@ -351,94 +400,119 @@ class EmailMonitorApp:
                     self.stop_event.wait(self.current_config['POLL_INTERVAL_SECONDS'])
                     continue
                 
+                # Search for matching emails
                 email_ids = em_search_emails(mail, self.current_config, logger=self.log_message_gui)
 
                 if not email_ids:
-                    self.log_message_gui(f"No new emails found. Waiting...") # Adjusted log message
-                # else: # No need for else, processing loop will handle if email_ids is populated
-                    # self.log_message_gui(f"Found {len(email_ids)} email(s) potentially matching criteria.")
-
+                    self.log_message_gui("No new emails found. Waiting...")
+                
+                # Process each email
                 for e_id_bytes in reversed(email_ids):
-                    if self.stop_event.is_set(): break
-                    e_id_str = e_id_bytes.decode()
-
+                    if self.stop_event.is_set():
+                        break
+                        
+                    e_id_str = e_id_bytes.decode() if isinstance(e_id_bytes, bytes) else e_id_bytes
                     if e_id_bytes in self.processed_email_ids:
                         continue
 
-                    status, msg_data_raw = mail.fetch(e_id_bytes, '(RFC822)')
-                    if status == 'OK':
-                        for response_part in msg_data_raw:
-                            if self.stop_event.is_set(): break
-                            if isinstance(response_part, tuple):
-                                msg = email.message_from_bytes(response_part[1])
-                                subject = em_decode_subject(msg['subject'])
-                                from_ = msg.get('From')
-                                self.log_message_gui(f"Processing ID {e_id_str}: From: {from_}, Subject: {subject}")
-
-                                keyword_in_subject = self.current_config['KEYWORD'].lower() in subject.lower()
-                                link = None
-                                keyword_in_body = False
-
-                                for part in msg.walk():
-                                    if self.stop_event.is_set(): break
-                                    if part.get_content_type() in ["text/plain", "text/html"] and \
-                                       "attachment" not in str(part.get("Content-Disposition")):
-                                        try:
-                                            body_part_content = part.get_payload(decode=True).decode()
-                                        except UnicodeDecodeError:
-                                            try: body_part_content = part.get_payload(decode=True).decode('latin-1', errors='replace')
-                                            except: continue
-                                        
-                                        if self.current_config['KEYWORD'].lower() in body_part_content.lower():
-                                            keyword_in_body = True
-                                        
-                                        if not link:
-                                            # Pass logger to em_extract_link_from_email
-                                            url_match = em_extract_link_from_email(msg, logger=self.log_message_gui)
-                                            if url_match: link = url_match
-                                        
-                                        if link and keyword_in_body: break
-                                
-                                if keyword_in_subject or keyword_in_body:
-                                    if link:
-                                        self.log_message_gui(f"Found link in email ID {e_id_str}: {link}")
-                                        em_open_link_in_browser(link, logger=self.log_message_gui)
-                                        em_mark_as_read(mail, e_id_bytes, self.current_config, logger=self.log_message_gui)
-                                        self.processed_email_ids.add(e_id_bytes)
-                                    else:
-                                        self.log_message_gui(f"Keyword found in ID {e_id_str}, but no link.")
-                                        em_mark_as_read(mail, e_id_bytes, self.current_config, logger=self.log_message_gui)
-                                        self.processed_email_ids.add(e_id_bytes)
-                                else:
-                                    self.log_message_gui(f"Keyword not in subject/body of ID {e_id_str} after fetch. Skipping.")
-                                    self.processed_email_ids.add(e_id_bytes)
-                    else:
-                        self.log_message_gui(f"Failed to fetch email ID {e_id_str}")
-                    if self.stop_event.is_set(): break
+                    # Process this email
+                    self._process_single_email(mail, e_id_bytes, e_id_str)
+                    
+                    if self.stop_event.is_set():
+                        break
             
             except imaplib.IMAP4.abort as e:
                 self.log_message_gui(f"IMAP connection aborted: {e}. Retrying connection...")
             except Exception as e:
-                self.log_message_gui(f"Error in monitoring loop: {type(e).__name__} - {e}") # Log type of error
+                self.log_message_gui(f"Error in monitoring loop: {type(e).__name__} - {e}")
             finally:
+                # Clean up mail connection
                 if mail:
                     try:
                         mail.close()
                         mail.logout()
-                        # self.log_message_gui("Logged out from Gmail.") # Can be a bit noisy
                     except Exception as e_logout:
                         self.log_message_gui(f"Error during logout: {e_logout}")
             
+            # Wait for next polling cycle if not stopping
             if not self.stop_event.is_set():
-                # self.log_message_gui(f"Waiting for {self.current_config['POLL_INTERVAL_SECONDS']} seconds...") # Noisy
                 self.stop_event.wait(self.current_config['POLL_INTERVAL_SECONDS'])
         
         self.log_message_gui("Monitoring loop finished.")
 
+    def _process_single_email(self, mail, e_id_bytes, e_id_str):
+        """Process a single email message"""
+        status, msg_data_raw = mail.fetch(e_id_bytes, '(RFC822)')
+        if status != 'OK':
+            self.log_message_gui(f"Failed to fetch email ID {e_id_str}")
+            return
+
+        for response_part in msg_data_raw:
+            if self.stop_event.is_set():
+                break
+                
+            if not isinstance(response_part, tuple):
+                continue
+                
+            # Parse email message
+            msg = email.message_from_bytes(response_part[1])
+            subject = decode_subject(msg['subject'])
+            from_ = msg.get('From')
+            self.log_message_gui(f"Processing ID {e_id_str}: From: {from_}, Subject: {subject}")
+
+            # Check for keyword match
+            keyword = self.current_config['KEYWORD'].lower()
+            keyword_in_subject = keyword in subject.lower()
+            link = None
+            keyword_in_body = False
+            
+            # Process email body parts
+            for part in msg.walk():
+                if self.stop_event.is_set():
+                    break
+                    
+                if part.get_content_type() in ["text/plain", "text/html"] and \
+                   "attachment" not in str(part.get("Content-Disposition")):
+                    try:
+                        body_part_content = part.get_payload(decode=True).decode()
+                    except UnicodeDecodeError:
+                        try:
+                            body_part_content = part.get_payload(decode=True).decode('latin-1', errors='replace')
+                        except:
+                            continue
+                    
+                    if keyword in body_part_content.lower():
+                        keyword_in_body = True
+                    
+                    if not link:
+                        url_match = extract_link_from_email(msg, logger=self.log_message_gui)
+                        if url_match:
+                            link = url_match
+                    
+                    if link and keyword_in_body:
+                        break
+            
+            # Handle email based on keyword match
+            if keyword_in_subject or keyword_in_body:
+                if link:
+                    self.log_message_gui(f"Found link in email ID {e_id_str}: {link}")
+                    open_link_in_browser(link, logger=self.log_message_gui)
+                    mark_as_read(mail, e_id_bytes, self.current_config, logger=self.log_message_gui)
+                else:
+                    self.log_message_gui(f"Keyword found in ID {e_id_str}, but no link.")
+                    mark_as_read(mail, e_id_bytes, self.current_config, logger=self.log_message_gui)
+            else:
+                self.log_message_gui(f"Keyword not in subject/body of ID {e_id_str} after fetch. Skipping.")
+            
+            # Mark email as processed
+            self.processed_email_ids.add(e_id_bytes)
+
     def log_message_gui(self, message):
+        """Add a message to the log queue to be displayed in the GUI"""
         self.log_queue.put(message)
 
     def check_log_queue(self):
+        """Process pending log messages from the queue"""
         try:
             while True:
                 message = self.log_queue.get_nowait()
@@ -449,9 +523,11 @@ class EmailMonitorApp:
         except queue.Empty:
             pass
         finally:
+            # Check again after a delay
             self.root.after(100, self.check_log_queue)
 
     def update_gui_state(self):
+        """Update the GUI elements based on the application state"""
         if self.monitoring_active:
             self.start_button.config(state=tk.DISABLED)
             self.stop_button.config(state=tk.NORMAL)
@@ -462,17 +538,19 @@ class EmailMonitorApp:
             self.settings_button.config(state=tk.NORMAL)
 
     def on_closing(self):
+        """Handle window close event"""
         if self.monitoring_active:
             choice = tk_messagebox.askyesnocancel(
                 "Confirm Exit", 
                 "Monitoring is active. Stop monitoring and exit, or minimize to tray?",
                 parent=self.root
             )
-            if choice is True:
+            if choice is True:  # Yes: Stop and exit
                 self.stop_monitoring()
                 self.quit_application()
-            elif choice is False:
+            elif choice is False:  # No: Minimize to tray
                 self.hide_to_tray()
+            # None (Cancel): Do nothing
         else:
             choice = tk_messagebox.askyesno(
                 "Minimize to Tray?", 
@@ -485,6 +563,7 @@ class EmailMonitorApp:
                 self.quit_application()
 
     def setup_tray_icon(self):
+        """Set up the system tray icon"""
         if not pystray or not PIL_AVAILABLE:
             self.log_message_gui("pystray or Pillow not found. System tray icon disabled.")
             self.tray_icon = None
@@ -494,9 +573,9 @@ class EmailMonitorApp:
             icon_path = "icon.png"
             dummy_image = None
 
+            # If icon file doesn't exist, create a dummy icon
             if not os.path.exists(icon_path):
                 try:
-                    # Create a dummy image only if needed
                     dummy_image = Image.new('RGB', (64, 64), color='blue')
                     dummy_image.save(icon_path)
                     self.log_message_gui(f"'{icon_path}' not found. Created a dummy icon. Replace with your desired icon.")
@@ -505,21 +584,27 @@ class EmailMonitorApp:
                     self.tray_icon = None
                     return
 
-            # Use either the existing image or the already created dummy image
+            # Load the icon image
             try:
-                image = Image.open(icon_path) if os.path.exists(icon_path) else dummy_image or Image.new('RGB', (64, 64), color='blue')
+                if os.path.exists(icon_path):
+                    image = Image.open(icon_path) 
+                else:
+                    image = dummy_image or Image.new('RGB', (64, 64), color='blue')
             except Exception:
                 # Last resort for tests
                 image = MagicMock()
                 
-            menu = (pystray.MenuItem('Show', self.show_from_tray, default=True),
-                    pystray.MenuItem('Settings', self.run_setup_wizard_from_tray),
-                    pystray.Menu.SEPARATOR,
-                    pystray.MenuItem('Quit', self.quit_application))
+            # Create the tray icon with menu
+            menu = (
+                pystray.MenuItem('Show', self.show_from_tray, default=True),
+                pystray.MenuItem('Settings', self.run_setup_wizard_from_tray),
+                pystray.Menu.SEPARATOR,
+                pystray.MenuItem('Quit', self.quit_application)
+            )
                     
             self.tray_icon = pystray.Icon("EmailMonitor", image, "Email Monitor", menu)
             
-            # Don't start the thread during testing
+            # Start tray icon thread (but not during testing)
             threading.Thread(target=self.tray_icon.run, daemon=True).start()
             
             self.log_message_gui("System tray icon initialized.")
@@ -532,6 +617,7 @@ class EmailMonitorApp:
             self.tray_icon = None
 
     def run_setup_wizard_from_tray(self):
+        """Open setup wizard from the tray icon"""
         self.show_from_tray()
         self.root.after(100, lambda: self.run_setup_wizard(force_setup=False))
 
@@ -552,22 +638,33 @@ class EmailMonitorApp:
                 self.quit_application()
 
     def show_from_tray(self, icon=None, item=None):
+        """Restore the application window from tray"""
         self.root.deiconify()
         self.root.lift()
         self.root.focus_set()
 
     def quit_application(self, icon=None, item=None):
+        """Exit the application cleanly"""
         self.log_message_gui("Exiting application...")
+        
+        # Stop monitoring if active
         if self.monitoring_active:
             self.stop_event.set()
             if self.monitoring_thread and self.monitoring_thread.is_alive():
                 self.monitoring_thread.join(timeout=5)
+                
+        # Stop tray icon if exists
         if self.tray_icon:
             self.tray_icon.stop()
+            
+        # Close application
         self.root.quit()
         self.root.destroy()
 
+
+# --- Application Entry Point ---
 if __name__ == "__main__":
+    # Check dependencies
     if not PIL_AVAILABLE:
         print("WARNING: Pillow library not found. System tray icon might not work or look as expected.")
         print("Please install it: pip install Pillow")
@@ -575,6 +672,7 @@ if __name__ == "__main__":
         print("WARNING: pystray library not found. System tray functionality will be disabled.")
         print("Please install it: pip install pystray")
 
+    # Create and run application
     root = tk.Tk()
     app = EmailMonitorApp(root)
     root.protocol("WM_DELETE_WINDOW", app.on_closing)
