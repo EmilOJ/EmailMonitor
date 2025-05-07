@@ -53,7 +53,7 @@ class TestTrayIconFunctionality(unittest.TestCase):
             _setup_mock_widgets(self.app)
             
     @patch('gui_app.PIL_AVAILABLE', True)
-    @patch('gui_app.pystray', spec=True)
+    @patch('gui_app.pystray', create_autospec=True) # Changed from spec=True
     @patch('gui_app.Image')
     @patch('os.path.exists', return_value=True)
     @patch('threading.Thread')
@@ -83,7 +83,7 @@ class TestTrayIconFunctionality(unittest.TestCase):
         self.assertEqual(self.app.tray_icon, mock_icon)
             
     @patch('gui_app.PIL_AVAILABLE', True)
-    @patch('gui_app.pystray', spec=True)
+    @patch('gui_app.pystray', create_autospec=True) # Changed from spec=True
     @patch('gui_app.Image')
     @patch('os.path.exists', return_value=False)
     @patch('threading.Thread')
@@ -146,6 +146,7 @@ class TestTrayIconFunctionality(unittest.TestCase):
         # Setup
         self.app.tray_icon = None
         self.app.quit_application = MagicMock()
+        self.app.root.tk.call = MagicMock() # Added to mock tk.call for messagebox
         
         # Call method
         self.app.hide_to_tray()
@@ -161,6 +162,7 @@ class TestTrayIconFunctionality(unittest.TestCase):
         # Setup
         self.app.tray_icon = None
         self.app.quit_application = MagicMock()
+        self.app.root.tk.call = MagicMock() # Added to mock tk.call for messagebox
         
         # Call method
         self.app.hide_to_tray()

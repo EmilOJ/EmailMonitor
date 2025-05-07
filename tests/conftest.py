@@ -57,6 +57,9 @@ class MockDialog:
 
     def apply(self):
         pass
+        
+    def destroy(self):
+        pass
 
 
 class MockIMAP4:

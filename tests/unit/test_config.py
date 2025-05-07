@@ -129,7 +129,7 @@ MAILBOX = "TestBox"
     def test_save_configuration_failure(self):
         """Test handling of failure to save configuration"""
         with patch('builtins.open', side_effect=Exception("Permission denied")), \
-             patch('tkinter.messagebox.showerror') as mock_showerror:
+             patch('gui_app.messagebox.showerror') as mock_showerror: # Changed patch target
             
             result = gui_app.save_configuration(self.test_config)
             
@@ -156,6 +156,7 @@ class TestSetupWizard(unittest.TestCase):
     @patch('gui_app.load_configuration')
     def test_setup_wizard_init_with_initial_config(self, mock_load_config, mock_dialog_init):
         """Test initialization of SetupWizard with initial config"""
+        mock_dialog_init.side_effect = None # Added fix
         parent = MagicMock()
         gui_app.SetupWizard(parent, initial_config=self.test_config)
         
@@ -168,6 +169,7 @@ class TestSetupWizard(unittest.TestCase):
     @patch('gui_app.load_configuration', return_value={"IMAP_SERVER": "imap.default.com"})
     def test_setup_wizard_init_without_initial_config(self, mock_load_config, mock_dialog_init):
         """Test initialization of SetupWizard without initial config"""
+        mock_dialog_init.side_effect = None # Added fix
         parent = MagicMock()
         gui_app.SetupWizard(parent)
         
@@ -178,9 +180,10 @@ class TestSetupWizard(unittest.TestCase):
 
     @patch('tkinter.simpledialog.Dialog.__init__')
     @patch('tkinter.simpledialog.Dialog.destroy')
-    @patch('tkinter.messagebox.showerror')
+    @patch('gui_app.messagebox.showerror') # Changed patch target
     def test_setup_wizard_apply_invalid_poll_interval(self, mock_showerror, mock_destroy, mock_dialog_init):
         """Test SetupWizard.apply() with invalid poll interval"""
+        mock_dialog_init.side_effect = None # Added fix
         # Setup
         parent = MagicMock()
         wizard = gui_app.SetupWizard(parent, initial_config=self.test_config)
@@ -197,9 +200,10 @@ class TestSetupWizard(unittest.TestCase):
 
     @patch('tkinter.simpledialog.Dialog.__init__')
     @patch('tkinter.simpledialog.Dialog.destroy')
-    @patch('tkinter.messagebox.showerror')
+    @patch('gui_app.messagebox.showerror') # Changed patch target
     def test_setup_wizard_apply_negative_poll_interval(self, mock_showerror, mock_destroy, mock_dialog_init):
         """Test SetupWizard.apply() with negative poll interval"""
+        mock_dialog_init.side_effect = None # Added fix
         # Setup
         parent = MagicMock()
         wizard = gui_app.SetupWizard(parent, initial_config=self.test_config)
@@ -218,6 +222,7 @@ class TestSetupWizard(unittest.TestCase):
     @patch('tkinter.simpledialog.Dialog.destroy')
     def test_setup_wizard_apply_valid_inputs(self, mock_destroy, mock_dialog_init):
         """Test SetupWizard.apply() with valid inputs"""
+        mock_dialog_init.side_effect = None # Added fix
         # Setup
         parent = MagicMock()
         wizard = gui_app.SetupWizard(parent, initial_config=self.test_config)

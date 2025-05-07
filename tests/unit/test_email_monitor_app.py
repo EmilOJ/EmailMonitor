@@ -157,7 +157,7 @@ class TestEmailMonitorApp(unittest.TestCase):
             mock_log.assert_called_with("Monitoring started.")
 
     @patch('gui_app.EmailMonitorApp.log_message_gui')
-    @patch('tkinter.messagebox.showwarning')
+    @patch('gui_app.messagebox.showwarning') # Changed patch target
     @patch('gui_app.EmailMonitorApp.run_setup_wizard')
     def test_start_monitoring_without_config(self, mock_run_setup, mock_warning, mock_log):
         """Test start_monitoring without valid configuration"""
@@ -292,7 +292,7 @@ class TestEmailMonitorApp(unittest.TestCase):
         self.app.settings_button.config.assert_called_with(state=tk.NORMAL)
 
     @patch('gui_app.EmailMonitorApp.log_message_gui')
-    @patch('tkinter.messagebox.showwarning')
+    @patch('gui_app.messagebox.showwarning') # Changed patch target
     def test_run_setup_wizard_when_monitoring(self, mock_warning, mock_log):
         """Test run_setup_wizard when monitoring is active"""
         # Setup
@@ -380,7 +380,7 @@ class TestEmailMonitorApp(unittest.TestCase):
         self.mock_log_message_gui.assert_called_once_with(test_message)
 
 
-    @patch('tkinter.messagebox.askyesnocancel')
+    @patch('gui_app.messagebox.askyesnocancel') # Changed patch target
     @patch('gui_app.EmailMonitorApp.stop_monitoring')
     @patch('gui_app.EmailMonitorApp.quit_application')
     @patch('gui_app.EmailMonitorApp.hide_to_tray')
@@ -399,7 +399,7 @@ class TestEmailMonitorApp(unittest.TestCase):
         mock_quit.assert_called_once()
         mock_hide.assert_not_called()
 
-    @patch('tkinter.messagebox.askyesnocancel')
+    @patch('gui_app.messagebox.askyesnocancel') # Changed patch target
     @patch('gui_app.EmailMonitorApp.stop_monitoring')
     @patch('gui_app.EmailMonitorApp.quit_application')
     @patch('gui_app.EmailMonitorApp.hide_to_tray')
@@ -418,7 +418,7 @@ class TestEmailMonitorApp(unittest.TestCase):
         mock_quit.assert_not_called()
         mock_hide.assert_called_once()
 
-    @patch('tkinter.messagebox.askyesno')
+    @patch('gui_app.messagebox.askyesno') # Changed patch target
     @patch('gui_app.EmailMonitorApp.quit_application')
     @patch('gui_app.EmailMonitorApp.hide_to_tray')
     def test_on_closing_when_not_monitoring_minimize(self, mock_hide, mock_quit, mock_dialog):
@@ -435,7 +435,7 @@ class TestEmailMonitorApp(unittest.TestCase):
         mock_hide.assert_called_once()
         mock_quit.assert_not_called()
 
-    @patch('tkinter.messagebox.askyesno')
+    @patch('gui_app.messagebox.askyesno') # Changed patch target
     @patch('gui_app.EmailMonitorApp.quit_application')
     @patch('gui_app.EmailMonitorApp.hide_to_tray')
     def test_on_closing_when_not_monitoring_quit(self, mock_hide, mock_quit, mock_dialog):
